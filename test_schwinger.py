@@ -65,12 +65,30 @@ def test_local_updates():
     print_info(cfg, local, n_upd, t_upd)
     local.update(cfg, n_upd, t_upd)
     print(cfg)
-
+def test_is_hop():
+    print("testing is_hop()...")
+    n_upd_1 = 0
+    t_upd_1 = 3
+    n_upd_2 = 2
+    t_upd_2 = 3
+    cfg = Cfg(4, 4)
+    local = LocalUpdates(m, J, w, Delta_tau)
+    # hops from
+    local.update(cfg, n_upd_1, t_upd_1)
+    local.update(cfg, n_upd_2, t_upd_2)
+    print(cfg)
+    print("Hopping from 1 to 0 at t=0 (1): %s (%s)"  % (cfg.is_hop(1, 0, 0), cfg.is_hop(1, 0, 1), ))
+    print("Hopping from 0 to 1 at t=0 (1): %s (%s)"  % (cfg.is_hop(0, 1, 0), cfg.is_hop(0, 1, 1), ))
+    print("Hopping from 0 to 1 at t=2 (3): %s (%s)"  % (cfg.is_hop(0, 1, 2), cfg.is_hop(0, 1, 3), ))
+    print("Hopping from 3 to 2 at t=2 (3): %s (%s)"  % (cfg.is_hop(3, 2, 2), cfg.is_hop(3, 2, 3), ))
+    print("Hopping from 2 to 3 at t=2 (3): %s (%s)"  % (cfg.is_hop(2, 3, 2), cfg.is_hop(2, 3, 3), ))
+    print("Hopping from 2 to 3 at t=0 (1): %s (%s)"  % (cfg.is_hop(2, 3, 0), cfg.is_hop(2, 3, 1), ))
 ###############################################################################
 
 if __name__ == '__main__':
     define_model_params()
-    print J
-    test_local_updates()
+    # print J
+    # test_local_updates()
     # test_even_odd()
+    test_is_hop()
 

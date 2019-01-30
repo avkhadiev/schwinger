@@ -28,18 +28,45 @@ def vac_expect(cfg, site, time):
     i = site
     t = time
     # correct for 0-indexed lattice sites
-    corr = float((-1)**(i+1) * cfg.n(i, t))
+    return float((-1)**(i+1) * cfg.n(i, t))
+
+#
+# mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
+#
+def m01(cfg, site, time):
+    i = site
+    t = time
+    return 0.5 * (cfg.is_hop(i+1, i, t) + cfg.is_hop(i-1, i, t))
+
+# mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
+#
+def m01_dagger(cfg, site, time):
+    i = site
+    t = time
+    return 0.5 * (cfg.is_hop(i, i+1, t) + cfg.is_hop(i, i-1, t))
+
+#
+# interpolating operator < mo1^\dagger m01 >
+#
+def interp_m01(cfg, source_site, sink_site, source_time, step):
+    i = source_site
+    j = sink_site
+    t = source_time
+    a = step
+    create  = m01(cfg, i, t)
+    destroy = m01_dagger(cfg, j, t+a)
+    corr = create * destroy
     return corr
 
 if __name__ == '__main__':
 ### Subtract vaccuum?
     subtract_vac = True
 ### Specify model parameters
-    nsites = 20
+    nsites = 8
     ntimes = 40
-    jw = 1.00
-    mw = 1.00
-    tw = 0.10
+    jw = 1.667
+    mw = 0.167
+    tw = 0.100
 ### Number of cfg files
     ncfgs = 10000
     assert(ncfgs > 1)
@@ -56,12 +83,12 @@ if __name__ == '__main__':
     # due to the checkerboard splitting, it only makes sense to average
     # over an even number of time steps; consequently,
     # (good) source times are only integer numbers.
-    tsteps    = np.array(range(0, ntimes, 2))# will however exclude one step at each time
-    src_times = np.array(range(2, ntimes, 2))# do not include the boundary term
+    tsteps    = np.array(range(1, ntimes, 2))
+    src_times = np.array(range(2, ntimes, 2))
 ### Compute connected 2-point correlation functions in each bin, write them out
     if not(os.path.isdir(res_bin_dir())):
         os.mkdir(res_bin_dir())
-    for new_bin in xrange(nbins):
+    for new_bin in xrange(80, nbins):
         # time averaging done over source-sink separation as well as source time
         tp_corr_acc     = np.zeros((len(src_times), len(tsteps)))
         # subtracting vacuum expectation value at each time separately
@@ -87,21 +114,19 @@ if __name__ == '__main__':
                 vev_fin_inc = 0.
                 vev_ini_inc = 0.
                 for j in xrange(i % 2, cfg.nsites, 2):
-                    vev_ini_inc += vac_expect(cfg, j, src_times[t])
-                for j in xrange(0, cfg.nsites, 2):
-                    vev_fin_inc += vac_expect(cfg, j, src_times[t])
+                    vev_ini_inc += m01(cfg, j, src_times[t])
+                for j in xrange(1, cfg.nsites, 2):
+                    vev_fin_inc += m01_dagger(cfg, j, src_times[t])
                 vev_ini_inc = vev_ini_inc / float(cfg.nsites / 2.)
                 vev_fin_inc = vev_fin_inc / float(cfg.nsites / 2.)
                 vev_acc_ini[t] += vev_ini_inc
                 vev_acc_fin[t] += vev_fin_inc
                 for a in xrange(len(tsteps)):
                     tp_corr_inc = 0.
-                    # average over sink sites
-                    if (tsteps[a] != (ntimes) - src_times[t]):
-                        for j in xrange(0, cfg.nsites, 2):
-                            tp_corr_inc += tp_corr(cfg, i, j,
-                                            src_times[t], tsteps[a])
-                        tp_corr_inc = tp_corr_inc / float(cfg.nsites / 2.)
+                    for j in xrange(1, cfg.nsites, 2):
+                        tp_corr_inc += interp_m01(cfg, i, j,
+                                        src_times[t], tsteps[a])
+                    tp_corr_inc = tp_corr_inc / float(cfg.nsites / 2.)
                     tp_corr_acc[t][a] += tp_corr_inc
             # close file
             infile.close()
@@ -114,11 +139,6 @@ if __name__ == '__main__':
             tp_corr_acc[t]     = 1./float(cfg_per_bin) * tp_corr_acc[t]
             vev_acc_ini[t]     = 1./float(cfg_per_bin) * vev_acc_ini[t]
             vev_acc_fin[t]     = 1./float(cfg_per_bin) * vev_acc_fin[t]
-        # then, compute all *connected* correlaton functions by subtracting
-        # the vacuum expectation value
-        #cn_tp_corr_acc = tp_corr_acc
-        #if (subtract_vac):
-        #    cn_tp_corr_acc = cn_tp_corr_acc - vev_acc
         # then, averaged over all source times
         # so that now you have ntimes values, one for each time separation
         # between source and sink

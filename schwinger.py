@@ -81,6 +81,57 @@ class Cfg():
         l_eq = int(np.array_equal(l1, l2))
         inner_prod = s_eq * l_eq
         return inner_prod
+
+    # takes from_site, i, to_site, j and at_time, t.
+    # returns:
+    #   1, if there was a hopping from site i to site j at time t
+    #   0, if there wasn't hopping.
+    #
+    # asserts that j = (i \pm 1) mod nsites
+    #
+    # !!! assumes the square whose bottom left corner is at (0, 0) is black !!!
+    #
+    # if i (j) == 0, let i (j) = nsites
+    #
+    # Due to checkerboard splitting, black squares where hopping can happen
+    # are at even times for some sites and odd times for others =>
+    # shifting time may be required:
+    #
+    #   if you're on the white square, check the previous (black) square
+    #
+    # to have a hop, must have
+    #   n(i, t) == n(j, t+1) == 1 and n(j, t) == n(i, t+1) == 0
+    def is_hop(self, from_site, to_site, at_time):
+        i = from_site
+        j = to_site
+        t = at_time
+        site_dist = (abs((i % self.nsites) - (j % self.nsites)))
+        assert((site_dist == 1) or (site_dist == self.nsites - 1))
+        # due to checkerboard splitting, shift time if required
+        # if you're on the white square, check the previous (black) square
+        #
+        # to check if a square is white, first
+        # choose bottom-left corner of the square
+        if (((i % self.nsites == 0)) or ((j % self.nsites) == 0)):
+            max_index = max(i % self.nsites, j % self.nsites)
+            if(max_index == 1):
+                bleft = 0
+            elif(max_index == (self.nsites - 1)):
+                bleft = self.nsites-1
+            else:
+                print("checking if square is white in is_hop(): unexpected case")
+        else:
+            bleft = min(i, j)
+        # assuming the square with bleft 0,0 is black,
+        # a square is white if bleft + t = odd number
+        is_white = ((bleft + t) % 2 == 1)
+        if (is_white):
+            t = t - 1
+        occpd = (self.n(i ,t) == self.n(j, t+1) == 1)
+        empty = (self.n(j, t) == self.n(i, t+1) == 0)
+        is_hop = occpd & empty
+        return is_hop
+
     # fermion hops from (site, time) to (site + 1, time);
     # connecting link value decreases by 1
     # assumes (site, time) is occupied and (site + 1, time) is unoccupied!
@@ -145,7 +196,7 @@ class LocalUpdates():
             min_coord_sum = 1
         else:
             min_coord_sum = 0
-        patch_time = np.random.randint(1, cfg.ntimes - 1)
+        patch_time = np.random.randint(0, cfg.ntimes)
         #   patch_time              coord_sum                   patch_site
         #   even                    even                        even
         #   even                    odd                         odd
@@ -405,8 +456,7 @@ class LocalMC():
 def measure_tp_corr(cfg, src_site, tstep):
     i = src_site
     a = tstep
-    # do not include boundaries in time
-    src_times = np.array(range(2,   cfg.ntimes, 2))
+    src_times = np.array(range(0,   cfg.ntimes, 1))
     snk_sites = np.array(range(0,   cfg.nsites, 1))
     tp_corr = 0.0
     # compute two-point correlation functions averaged over
@@ -423,8 +473,7 @@ def measure_tp_corr(cfg, src_site, tstep):
     return tp_corr
 
 def measure_vev(cfg):
-    # do not include boundaries in time
-    times = np.array(range(2,   cfg.ntimes, 2))
+    times = np.array(range(0,   cfg.ntimes, 1))
     sites = np.array(range(0,   cfg.nsites, 1))
     vev = 0.0
     # compute two-point correlation functions averaged over
@@ -478,13 +527,13 @@ def test_dot(cfg, t_test):
 if __name__ == '__main__':
 ### Specify MC settings
     n_corr = 10                     # how often to save configuration
-    n_equil_sweeps = 10  * n_corr   # length of equilibration
-    n_sampl_sweeps = 10000 * n_corr # length of sampling
+    n_equil_sweeps = 500  * n_corr  # length of equilibration
+    n_sampl_sweeps = 100000 * n_corr # length of sampling
     n_print_sweeps = 10 * n_corr    # how often to print sim status
     measure_obs    = True
 ### Specify model parameters
     nsites = 8
-    ntimes = 16
+    ntimes = 40
     # for Savage's paper:   1.60, 0.16, 0.50
     # for Muschik's papers: 1.00, 1.00, 0.05
     # for roughly 20% acc:  0.30, 0.02, 0.50
