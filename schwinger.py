@@ -1,16 +1,26 @@
  #!/usr/bin/env python
  # -*- coding: utf-8 -*-
 
-# TODO how do I know my configs are not correlated?
-
 import numpy as np
+# import numba
+# from numba import jitclass
 from schwinger_helper import cfg_dir, cfg_fname, obs_dir, obs_fname
 from random import randrange
 import os
+import time
 
 ###############################################################################
 #                                CONFIGURATION                                #
 ###############################################################################
+# cfg_spec = [
+#         ('nsites', int64),
+#         ('ntimes', int64),
+#         ('lmax', int64),
+#         ('beta', float64),
+#         ('size', )
+#         ('sites')
+#         ('links')
+#     ]
 class Cfg():
     """Configuration of the 1+1D lattice"""
     ndim = 2
@@ -38,20 +48,20 @@ class Cfg():
         # given number of sites per row,
         # returns string to pad rows to improve readability
         row_padding = (lspaces + row_zfill) * ' '
-        for site in xrange(self.nsites):
+        for site in range(self.nsites):
             row_padding += '|' + 3 * link_spaces * ' '
         # 0th column printed on either end to show periodicity
         row_padding += '|'
         col_numbering = (row_zfill + lspaces - 1) * ' '
-        for site in xrange(self.nsites):
+        for site in range(self.nsites):
             col_numbering += str(site).zfill(col_zfill) + 2 * link_spaces * ' '
         # 0th column printed on either end to show periodicity
         col_numbering += str(0).zfill(col_zfill)
         # build the lattice string from the top row down;
         # include 0th row at the top
-        for step in reversed(xrange(self.ntimes + 1)):
+        for step in reversed(range(self.ntimes + 1)):
             s += str(step % self.ntimes).zfill(row_zfill) + lspaces * ' '
-            for site in xrange(self.nsites):
+            for site in range(self.nsites):
                 s += '{0:d}'.format(self.n(site, step))
                 s += link_spaces * ' '
                 s += '{0:+d}'.format(self.l(site, step))
@@ -96,19 +106,17 @@ class Cfg():
     # Due to checkerboard splitting, black squares where hopping can happen
     # are at even times for some sites and odd times for others =>
     # shifting time may be required:
-    #
-    #   if you're on the white square, check the previous (black) square
-    #
-    # to have a hop, must have
-    #   n(i, t) == n(j, t+1) == 1 and n(j, t) == n(i, t+1) == 0
     def is_hop(self, from_site, to_site, at_time):
         i = from_site
         j = to_site
         t = at_time
         site_dist = (abs((i % self.nsites) - (j % self.nsites)))
         assert((site_dist == 1) or (site_dist == self.nsites - 1))
+        #
         # due to checkerboard splitting, shift time if required
-        # if you're on the white square, check the previous (black) square
+        #
+        # first determine if specified coordinates give hopping on a shaded
+        # square or a white square
         #
         # to check if a square is white, first
         # choose bottom-left corner of the square
@@ -122,11 +130,20 @@ class Cfg():
                 print("checking if square is white in is_hop(): unexpected case")
         else:
             bleft = min(i, j)
-        # assuming the square with bleft 0,0 is black,
+        # assuming the square with bleft 0, 0 is black,
         # a square is white if bleft + t = odd number
         is_white = ((bleft + t) % 2 == 1)
         if (is_white):
-            t = t - 1
+            # if the square is white and the time coordinate is odd,
+            # shift the time back
+            if (t % 2 == 1):
+                t = t - 1
+            # if the square is white and the time coordinate is even,
+            # shift the time forward
+            elif (t % 2 == 0):
+                t = t + 1
+        # to have a hop from i to j at time t, must have
+        # n(i, t) == n(j, t+1) == 1 and n(j, t) == n(i, t+1) == 0
         occpd = (self.n(i ,t) == self.n(j, t+1) == 1)
         empty = (self.n(j, t) == self.n(i, t+1) == 0)
         is_hop = occpd & empty
@@ -253,6 +270,24 @@ class LocalUpdates():
     def is_square_white(self, site, time):
         return ((site + time) % 2 == 1)
 
+# generates a list of all white squares as coordinates of their
+# lower-left corner --- (site, time).
+# required for updates
+    def white_squares(self, nsites, ntimes):
+        # if the bottom left square is black,
+        # the sum of coordinates of a bottom left corner
+        # for any white square is an odd number
+        # otherwise it is an even number
+        if (self.is_square_white(1, 0)):
+            min_coord_sum = 1
+        else:
+            min_coord_sum = 0
+        white_squares = [(site, time)
+            for site in range(nsites)
+            for time in range(ntimes)
+            if ((site + time) % 2 == min_coord_sum)]
+        return white_squares
+
 # given config and (site, time) for a *white* square,
 # returns the ratio R = W_new / W_old,
 # where W_new is the W_old is the weight of the current configuration, and
@@ -341,7 +376,7 @@ class LocalUpdates():
     def sweep(self, cfg):
         naccepts = 0
         npatches = int(cfg.nsites * cfg.ntimes / 2)
-        for patch in xrange(npatches):
+        for patch in range(npatches):
             p_site, p_time = self.choose_patch(cfg)
             # if update on given patch is allowed,
             # update with probability p_acc
@@ -419,16 +454,17 @@ class LocalMC():
                 # print("saving %s..." % fname)
                 self.cfg.save(outfile)
                 outfile.close()
-            if ((a_sweep + 1) % n_print_sweeps == 0):
+            if ((a_sweep) % n_print_sweeps == 0):
                 print ("acceptance (%4d / %4d) * 100 prcnt = %4.2f prcnt"
                        % (naccepts, ntrials, rate * 100.))
+                print ("%5d out of %5d sweeps completed (%.2f prcnt)" % (a_sweep, n_sweeps, float(a_sweep)/float(n_sweeps) * 100, ))
         avg_rate = rate_acc / n_sweeps
         # returns average acceptance ratio
         return (current_sweep, avg_rate)
 
     def evolve(self, n_corr, n_equil, n_sample, n_print):
-        if (self.measure_obs):
-             obsfile = open(self.obsfname, 'w')
+        #if (self.measure_obs):
+        obsfile = open(self.obsfname, 'w')
         sweep = 0
 ### Equilibrate the lattice #
         print("Equilibrating the lattice")
@@ -527,13 +563,13 @@ def test_dot(cfg, t_test):
 if __name__ == '__main__':
 ### Specify MC settings
     n_corr = 10                     # how often to save configuration
-    n_equil_sweeps = 500  * n_corr  # length of equilibration
-    n_sampl_sweeps = 100000 * n_corr # length of sampling
+    n_equil_sweeps = 50  * n_corr   # length of equilibration
+    n_sampl_sweeps = 1000 * n_corr  # length of sampling
     n_print_sweeps = 10 * n_corr    # how often to print sim status
-    measure_obs    = True
+    measure_obs    = False
 ### Specify model parameters
     nsites = 8
-    ntimes = 40
+    ntimes = 20
     # for Savage's paper:   1.60, 0.16, 0.50
     # for Muschik's papers: 1.00, 1.00, 0.05
     # for roughly 20% acc:  0.30, 0.02, 0.50
@@ -545,13 +581,16 @@ if __name__ == '__main__':
 ### Initialize the simulation ###
     cfg = Cfg(nsites, ntimes)
     upd = LocalUpdates(m, J, w, Delta_tau)
-    if (measure_obs):
-        if not(os.path.isdir(obs_dir())):
-            os.mkdir(obs_dir())
-        obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr)
-        obsfile = open(obsfname, 'w')
+#    if (measure_obs):
+    if not(os.path.isdir(obs_dir())):
+        os.mkdir(obs_dir())
+    obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr)
+    obsfile = open(obsfname, 'w')
     sim = LocalMC(cfg, upd, measure_obs, cfg_dir(), obs_dir())
 ### Evolve ###
+    t1 = time.clock()
     sim.evolve(n_corr, n_equil_sweeps, n_sampl_sweeps, n_print_sweeps)
+    t2 = time.clock()
+    print('Time elapsed: %f seconds' %(t2-t1))
 
 

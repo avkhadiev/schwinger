@@ -15,14 +15,14 @@ def cma(arr):
 
 if __name__ == '__main__':
 ### Specify MC settings
-    ncor = 10            # how often to save configuration
-    neql = 500   * ncor  # length of equilibration
-    ncf  = 100000  * ncor # length of sampling
+    ncor = 50            # how often to save configuration
+    neql = 500    * ncor # length of equilibration
+    ncf  = 10000  * ncor # length of sampling
 ### Expected condensate density in ground state from exact diagonalization
     expected_condensate = -0.324714
 ### Specify model parameters
     nsites = 8
-    ntimes = 40
+    ntimes = 80
     jw = 1.667
     mw = 0.167
     tw = 0.100

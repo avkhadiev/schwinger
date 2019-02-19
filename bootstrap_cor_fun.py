@@ -49,13 +49,13 @@ def get_increment_factor(new_bin, bin_it, ensemble, nbins, print_updates = False
 
 if __name__ == '__main__':
 ### Number of bins => size of ensembles
-    ncfgs = 100000
+    ncfgs = 10000
     nbins = 100
     nensembles = 100
     nprint_bin = nbins / 10
 ### Specify model parameters
     nsites = 8
-    ntimes = 40
+    ntimes = 80
     jw = 1.667
     mw = 0.167
     tw = 0.100
@@ -130,12 +130,15 @@ if __name__ == '__main__':
     vev_ini_ens_avg = 1./float(nbins) * vev_ini_acc
     vev_fin_ens_avg = 1./float(nbins) * vev_fin_acc
     # finf connected correlations
+    # TODO check with background subtraction removed
+    cn_tp_corr_ens_avg = tp_corr_ens_avg - vev_ini_ens_avg * vev_fin_ens_avg
     print vev_ini_ens_avg[0]
     print vev_fin_ens_avg[0]
-    cn_tp_corr_ens_avg = tp_corr_ens_avg - vev_ini_ens_avg * vev_fin_ens_avg
+    print cn_tp_corr_ens_avg[0]
     # find the average of ensemble averages and their standard deviation
     cn_tp_corr_avg = np.average(cn_tp_corr_ens_avg, axis = 0)
     cn_tp_corr_std = np.std(cn_tp_corr_ens_avg, axis=0, ddof=1)
+    print cn_tp_corr_avg
     # print out data file
     results = np.stack((tsteps,
             cn_tp_corr_avg, cn_tp_corr_std),
