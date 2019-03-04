@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from schwinger_helper import obs_dir, obs_fname
@@ -15,20 +20,20 @@ def cma(arr):
 
 if __name__ == '__main__':
 ### Specify MC settings
-    ncor = 50            # how often to save configuration
-    neql = 500    * ncor # length of equilibration
-    ncf  = 10000  * ncor # length of sampling
+    ncor = 10            # how often to save configuration
+    neql = 50    * ncor  # length of equilibration
+    ncf  = 100   * ncor  # length of sampling
 ### Expected condensate density in ground state from exact diagonalization
     expected_condensate = -0.324714
 ### Specify model parameters
     nsites = 8
-    ntimes = 80
+    ntimes = 20
     jw = 1.667
     mw = 0.167
     tw = 0.100
 ### Binning data to calculate average
     nbins = 100
-    binsize = ncf / 200
+    binsize = int(ncf / 200)
 ### How much to plot
     start = 0
     trunc = ncf
@@ -121,7 +126,6 @@ if __name__ == '__main__':
     ax.xaxis.set_major_locator(MaxNLocator(integer=True)) # sets integer ticks
     plt.subplots_adjust(right=0.8, left=0.15, bottom=0.25)
     plt.savefig("mc_run_condensate.png", dpi=300)
-    plt.show()
 
 ###############################################################################
 #                              ACCEPTANCE RATE                                #
@@ -172,4 +176,3 @@ if __name__ == '__main__':
     ax.xaxis.set_major_locator(MaxNLocator(integer=True)) # sets integer ticks
     plt.subplots_adjust(right=0.8, left=0.15, bottom=0.25)
     plt.savefig("mc_run_accrate.png", dpi=300)
-    plt.show()

@@ -7,7 +7,6 @@ import numpy as np
 from schwinger_helper import cfg_dir, cfg_fname, obs_dir, obs_fname
 from random import randrange
 import os
-import time
 
 ###############################################################################
 #                                CONFIGURATION                                #
@@ -407,8 +406,6 @@ class LocalMC():
         if (self.measure_obs):
             if not(os.path.isdir(obs_dir)):
                 os.mkdir(obs_dir)
-         #    obsfname = obs_fname(obs_dir, nsites, ntimes, jw, mw, tw, n_corr)
-         #    self.obsfile = open(obsfname, 'w')
     def __str__(self):
         m, J, w, Delta_tau = self.upd.params()
         s = ("QMC of %03dx%03d lattice with params (J/w = %.2f, m/w = %.2f, w * Delta_tau = %.2f)."
@@ -450,7 +447,7 @@ class LocalMC():
                                  self.cfg.nsites, self.cfg.ntimes,
                                  float(J/w), float(m/w), float(Delta_tau * w),
                                  int(a_sweep/n_corr))
-                outfile = open(fname, 'w')
+                outfile = open(fname, 'wb')         # will write bytes through numpy
                 # print("saving %s..." % fname)
                 self.cfg.save(outfile)
                 outfile.close()
@@ -464,7 +461,7 @@ class LocalMC():
 
     def evolve(self, n_corr, n_equil, n_sample, n_print):
         #if (self.measure_obs):
-        obsfile = open(self.obsfname, 'w')
+        obsfile = open(self.obsfname, 'w')      # will write strings, not bytes
         sweep = 0
 ### Equilibrate the lattice #
         print("Equilibrating the lattice")
@@ -564,9 +561,9 @@ if __name__ == '__main__':
 ### Specify MC settings
     n_corr = 10                     # how often to save configuration
     n_equil_sweeps = 50  * n_corr   # length of equilibration
-    n_sampl_sweeps = 1000 * n_corr  # length of sampling
-    n_print_sweeps = 10 * n_corr    # how often to print sim status
-    measure_obs    = False
+    n_sampl_sweeps = 100 * n_corr   # length of sampling
+    n_print_sweeps = 10  * n_corr   # how often to print sim status
+    measure_obs    = True
 ### Specify model parameters
     nsites = 8
     ntimes = 20
@@ -585,12 +582,9 @@ if __name__ == '__main__':
     if not(os.path.isdir(obs_dir())):
         os.mkdir(obs_dir())
     obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr)
-    obsfile = open(obsfname, 'w')
+    # obsfile = open(obsfname, 'w')   # will writes string, not bytes
     sim = LocalMC(cfg, upd, measure_obs, cfg_dir(), obs_dir())
 ### Evolve ###
-    t1 = time.clock()
     sim.evolve(n_corr, n_equil_sweeps, n_sampl_sweeps, n_print_sweeps)
-    t2 = time.clock()
-    print('Time elapsed: %f seconds' %(t2-t1))
 
 

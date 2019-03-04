@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+output_dir = "/Volumes/Macintosh HD/Volumes/Mercury/artur"
+
 # Returns name of the folder where config files reside (from current directory)
 def cfg_dir():
-    return "cfg"
+    return (output_dir + "/" + "cfg")
 
 # Returns name of the folder where data with corr functions resides
 # (from current directory)
 def res_dir():
-    return "data"
+    return (output_dir + "/" + "data")
 
 # Returns name of the folder where binned data with corr functions resides
 # (from current directory) --- this data can then be bootstrapped
@@ -19,7 +21,7 @@ def res_bin_dir():
 # Returns name of the folder where observables (tracked during sampling) are
 # located
 def obs_dir():
-    return "obs"
+    return (output_dir + "/" + "obs")
 
 #   dir = folder name, from current directory
 #   namebase = base name in the naming convention
