@@ -18,7 +18,7 @@ def get_increment_factor(new_bin, bin_it, ensemble, nbins, print_updates = False
     factor  = 0
     bin_ind = int(bin_it)
     if (print_updates):
-        print ("Current leftmost unread index is %d" % (bin_it[ens]))
+        print ("Current leftmost unread index is %d" % (bin_it))
     # figure out how many time current bin needs to be counted
     # in this ensemble
     # if haven't finished calculating for this ensemble yet...
@@ -39,30 +39,19 @@ def get_increment_factor(new_bin, bin_it, ensemble, nbins, print_updates = False
             else:
                 assert(current_ind >= new_bin)
         if (print_updates):
-            print ("New leftmost index is %d" % (bin_it[ens]))
-            print ("Ensemble %.3d includes the correlation function..." % (ens, ))
+            print ("New leftmost index is %d" % (bin_it))
+            # print ("Ensemble %.3d includes the correlation function..." % (ens, ))
             print ("%.3d times" % (factor, ))
     elif (print_updates):
         print ("...already completed the ensemble!")
     return (factor, bin_ind)
 
-
-if __name__ == '__main__':
-### Number of bins => size of ensembles
-    ncfgs = 10000
-    nbins = 100
-    nensembles = 100
+################################################################################
+#                                   BOOTSTRAP                                  #
+################################################################################
+def bootstrap(ncfgs, nbins, nensembles, nsites, ntimes, jw, mw, tw, tsteps):
+    print_updates = False
     nprint_bin = nbins / 10
-### Specify model parameters
-    nsites = 8
-    ntimes = 80
-    jw = 1.667
-    mw = 0.167
-    tw = 0.100
-    # due to the checkerboard splitting, it only makes sense to average
-    # over an even number of time steps; consequently,
-    # (good) source times are only integer numbers.
-    tsteps    = np.array(range(0, ntimes, 2))
     nsteps    = len(tsteps)
 ### Generate random ensembles
     # each row is an ensemble of bin indices, sorted
@@ -82,8 +71,8 @@ if __name__ == '__main__':
     tp_corr_acc     = np.zeros((nensembles, nsteps))# averaging for each time step
     vev_ini_acc     = np.zeros((nensembles, nsteps))
     vev_fin_acc     = np.zeros((nensembles, nsteps))
-    for new_bin in xrange(nbins):
-        if (new_bin % nprint_bin == 0):
+    for new_bin in range(nbins):
+        if (print_updates and (new_bin % nprint_bin == 0)):
             print ("Including bin %.3d..." % (new_bin, ))
         fname = res_fname_binned(res_bin_dir(), nsites, ntimes,
                                     jw, mw, tw,
@@ -94,8 +83,7 @@ if __name__ == '__main__':
         vev_ini = res[2]
         vev_fin = res[3]
         # loop over ensembles
-        print_updates = False
-        for ens in xrange(nensembles):
+        for ens in range(nensembles):
             ####################################################################
             #                       TWO-POINT CORRELATION                      #
             ####################################################################
@@ -130,15 +118,34 @@ if __name__ == '__main__':
     vev_ini_ens_avg = 1./float(nbins) * vev_ini_acc
     vev_fin_ens_avg = 1./float(nbins) * vev_fin_acc
     # finf connected correlations
-    # TODO check with background subtraction removed
     cn_tp_corr_ens_avg = tp_corr_ens_avg - vev_ini_ens_avg * vev_fin_ens_avg
-    print vev_ini_ens_avg[0]
-    print vev_fin_ens_avg[0]
-    print cn_tp_corr_ens_avg[0]
+    # print(vev_ini_ens_avg[0])
+    # print(vev_fin_ens_avg[0])
+    # print(cn_tp_corr_ens_avg[0])
     # find the average of ensemble averages and their standard deviation
     cn_tp_corr_avg = np.average(cn_tp_corr_ens_avg, axis = 0)
     cn_tp_corr_std = np.std(cn_tp_corr_ens_avg, axis=0, ddof=1)
-    print cn_tp_corr_avg
+    return cn_tp_corr_avg, cn_tp_corr_std
+
+if __name__ == '__main__':
+### Number of bins => size of ensembles
+    ncfgs = 100000
+    nbins = 100
+    nensembles = 100
+    # nprint_bin = nbins / 10
+### Specify model parameters
+    nsites = 8
+    ntimes = 80
+    jw = 1.667
+    mw = 0.167
+    tw = 0.100
+    # due to the checkerboard splitting, it only makes sense to average
+    # over an even number of time steps; consequently,
+    # (good) source times are only integer numbers.
+    tsteps    = np.array(range(0, ntimes, 2))
+    # nsteps    = len(tsteps)
+    cn_tp_corr_avg, cn_tp_corr_std = bootstrap(ncfgs, nbins, nensembles, nsites, ntimes, jw, mw, tw, tsteps)
+    print(cn_tp_corr_avg)
     # print out data file
     results = np.stack((tsteps,
             cn_tp_corr_avg, cn_tp_corr_std),

@@ -36,14 +36,14 @@ def vac_expect(cfg, site, time):
 def m01(cfg, site, time):
     i = site
     t = time
-    return 0.5 * (cfg.is_hop(i, i-1, t) + cfg.is_hop(i, i+1, t))
+    return 0.5 * (int(cfg.is_hop(i, i-1, t)) - int(cfg.is_hop(i, i+1, t)))
 
 # mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
 #
 def m01_dagger(cfg, site, time):
     i = site
     t = time
-    return 0.5 * (cfg.is_hop(i-1, i, t) + cfg.is_hop(i+1, i, t))
+    return 0.5 * (int(cfg.is_hop(i-1, i, t)) - int(cfg.is_hop(i+1, i, t)))
 
 #
 # interpolating operator < mo1^\dagger m01 >
@@ -68,14 +68,14 @@ if __name__ == '__main__':
     mw = 0.167
     tw = 0.100
 ### Number of cfg files
-    ncfgs = 100000
+    ncfgs = 10000
     assert(ncfgs > 1)
     cfg = Cfg(nsites, ntimes)
 ### Print status every ... bins
     nprint = 10
 ### Bootstrap and binning
-    nbins = 100
-    cfg_per_bin = ncfgs / nbins
+    nbins = 250
+    cfg_per_bin = int(ncfgs / nbins)
 ### Loop to read cfg files ###
     # choose fixed fermionic site for the source in the two-point corr function
     src_site = 1
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 ### Compute connected 2-point correlation functions in each bin, write them out
     if not(os.path.isdir(res_bin_dir())):
         os.mkdir(res_bin_dir())
-    for new_bin in xrange(nbins):
+    for new_bin in range(nbins):
         # time averaging done over source-sink separation as well as source time
         tp_corr_acc     = np.zeros((len(src_times), len(tsteps)))
         # subtracting vacuum expectation value at each time separately
@@ -97,32 +97,32 @@ if __name__ == '__main__':
         # determine the range of configurations for this bin
         first_cfg    = new_bin   * cfg_per_bin
         next_bin_cfg = first_cfg + cfg_per_bin
-        for ncfg in xrange(first_cfg, next_bin_cfg):
+        for ncfg in range(first_cfg, next_bin_cfg):
             # load a config from file
             fname = cfg_fname(cfg_dir(), nsites, ntimes, jw, mw, tw, ncfg)
-            infile = open(fname, 'r')
+            infile = open(fname, 'rb')
             cfg.load(infile)
             # compute connected two-point correlations
             # two-point correlation functions averaged over
             # all source times, all separations between source and sink,
             # and all sink sites,
             # and the corresponding vacuum expectation
-            for t in xrange(len(src_times)):
+            for t in range(len(src_times)):
                 i = src_site
                 # calculate vacuum expectation values for source and sink
                 # vev_acc_ini[t] += vac_expect(cfg, i, src_times[t])
                 vev_fin_inc = 0.
                 vev_ini_inc = 0.
-                for j in xrange(i % 2, cfg.nsites, 2):
+                for j in range(i % 2, cfg.nsites, 2):
                     vev_ini_inc += m01(cfg, j, src_times[t])
                     vev_fin_inc += m01_dagger(cfg, j, src_times[t])
                 vev_ini_inc = vev_ini_inc / float(cfg.nsites / 2.)
                 vev_fin_inc = vev_fin_inc / float(cfg.nsites / 2.)
                 vev_acc_ini[t] += vev_ini_inc
                 vev_acc_fin[t] += vev_fin_inc
-                for a in xrange(len(tsteps)):
+                for a in range(len(tsteps)):
                     tp_corr_inc = 0.
-                    for j in xrange(i % 2, cfg.nsites, 2):
+                    for j in range(i % 2, cfg.nsites, 2):
                         tp_corr_inc += interp_m01(cfg, i, j,
                                         src_times[t], tsteps[a])
                     tp_corr_inc = tp_corr_inc / float(cfg.nsites / 2.)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         # calculate the averages per bin
         # two-point correlation functions
         # first, computed separately for each source time
-        for t in xrange(len(src_times)):
+        for t in range(len(src_times)):
             # here, accumulators at each time have one value for each
             # source-sink time separation
             tp_corr_acc[t]     = 1./float(cfg_per_bin) * tp_corr_acc[t]

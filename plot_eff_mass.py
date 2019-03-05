@@ -13,7 +13,7 @@ if __name__ == '__main__':
 ### Specify model parameters
     nsites = 8
     ntimes = 80
-    ncfs  = [10000, 100000]
+    ncf  = 100000
     ncor  = 50
     neql  = 500
     nbins = 100
@@ -26,14 +26,14 @@ if __name__ == '__main__':
 ### How many points to plot
     nsteps  = int(ntimes/2)
     start   = 1                     # omit first # pts
-    finish  = 1                # omit last # points
+    finish  = int(2. *nsteps/3.)    # omit last # points
     inter = 1                       # plot points with interval
     npoints = int(nsteps) - (start + finish)
     trunc = start + inter * npoints
     assert(trunc <= nsteps)
 ### Set up the figure
     ax = plt.figure().gca()
-    ax.set_title("$\Gamma(\\tau)$ with $M_{01}$ as interpolating operator\n(without vacuum subtraction)", fontsize = 12)
+    ax.set_title("$\Gamma(\\tau)$ with $M_{01}$ as interpolating operator", fontsize = 12)
     ttl = ax.title
     ttl.set_position([.5, 1.02])
     ax.set_xlabel(r'$w\Delta\tau$',              fontsize = 14)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         "\n" # skip extra line for readability
         r'$N_{\mathrm{cor}}=%4d$' % (ncor,),
         r'$N_{\mathrm{eql}}=%4d$' % (neql,),
-        # r'$N_{\mathrm{cfg}}=%4d$' % (ncf,),
+        r'$N_{\mathrm{cfg}}=%4d$' % (ncf,),
         r'$N_{\mathrm{bin}}=%4d$' % (nbins,),
         r'$N_{\mathrm{ens}}=%4d$' % (nens,)))
     props = dict(boxstyle='round', facecolor='white', alpha=0.0)
@@ -68,39 +68,38 @@ if __name__ == '__main__':
     # ax.text(0.50, -0.25, eff_mass_str, transform=ax.transAxes, fontsize=10,
     #     verticalalignment='top', horizontalalignment = 'center', bbox=props)
 ### Read the data file in
-    for ncf in ncfs:
-        fname       = res_fname_bootstrapped(res_dir() + "/bootstrapped", nsites, ntimes, jw, mw, tw, ncf, nbins, nens)
-        res         = np.transpose(np.loadtxt(fname))
-        tsteps      = res[0]
-        cn_tp_corr     = res[1]
-        cn_tp_corr_err = res[2]
-        tsteps      = tsteps[start:trunc:inter]
-        cn_tp_corr     = cn_tp_corr[start:trunc:inter]
-        cn_tp_corr_err = cn_tp_corr_err[start:trunc:inter]
-        # remove spurious values (for large timestep artefacts)
-        print cn_tp_corr
-        # cn_tp_corr[cn_tp_corr < 0] = np.nan
-        # cn_tp_corr_err[cn_tp_corr < 0] = np.nan
-        # log[ Gn / Gm ], m = n+1
-        eff_mass = np.log(cn_tp_corr[:-1]/cn_tp_corr[1:])
-        # Sqrt[ dx^2 / x^2 + dy^2 / y^2 ]
-        eff_mass_err = np.sqrt(
-                    (cn_tp_corr_err[:-1]/cn_tp_corr[:-1])**2
-                    + (cn_tp_corr_err[1:]/cn_tp_corr[1:])**2)
-        # size of the step is tw * 2 = t/a
-        eff_mass = eff_mass / (2. * tw)
-        eff_mass_err = eff_mass_err / (2. * tw)
-        print eff_mass
-        print eff_mass_err
+    fname       = res_fname_bootstrapped(res_dir() + "/bootstrapped", nsites, ntimes, jw, mw, tw, ncf, nbins, nens)
+    res         = np.transpose(np.loadtxt(fname))
+    tsteps      = res[0]
+    cn_tp_corr     = res[1]
+    cn_tp_corr_err = res[2]
+    tsteps      = tsteps[start:trunc:inter]
+    cn_tp_corr     = cn_tp_corr[start:trunc:inter]
+    cn_tp_corr_err = cn_tp_corr_err[start:trunc:inter]
+    # remove spurious values (for large timestep artefacts)
+    print(cn_tp_corr)
+    # cn_tp_corr[cn_tp_corr < 0] = np.nan
+    # cn_tp_corr_err[cn_tp_corr < 0] = np.nan
+    # log[ Gn / Gm ], m = n+1
+    eff_mass = np.log(cn_tp_corr[:-1]/cn_tp_corr[1:])
+    # Sqrt[ dx^2 / x^2 + dy^2 / y^2 ]
+    eff_mass_err = np.sqrt(
+                (cn_tp_corr_err[:-1]/cn_tp_corr[:-1])**2
+                + (cn_tp_corr_err[1:]/cn_tp_corr[1:])**2)
+    # size of the step is tw * 2 = t/a
+    eff_mass = eff_mass / (2. * tw)
+    eff_mass_err = eff_mass_err / (2. * tw)
+    print(eff_mass)
+    print(eff_mass_err)
 ### Plot
-        # MC
-        ax.errorbar(tsteps[:-1], eff_mass, yerr = eff_mass_err, fmt='o',
-                # label = r'MC')
-                  label = ((r'$N_{\mathrm{cf}}=%4d$' % (ncf,))))
-                # label = ((r'$w\Delta\tau=%.3f$' % (tw,))))
-                # label = ((r'$\frac{m}{w}=%.3f$' % (mw, ))))
-                # label = ((r'$\frac{J}{w}=%.3f$' % (jw, ))))
-                # label = ((r'$%3d \times %3d$  lat' % (nsites, ntimes))))
+    # MC
+    ax.errorbar(tsteps[:-1], eff_mass, yerr = eff_mass_err, fmt='o',
+            # label = r'MC')
+              label = ((r'$N_{\mathrm{cf}}=%4d$' % (ncf,))))
+            # label = ((r'$w\Delta\tau=%.3f$' % (tw,))))
+            # label = ((r'$\frac{m}{w}=%.3f$' % (mw, ))))
+            # label = ((r'$\frac{J}{w}=%.3f$' % (jw, ))))
+            # label = ((r'$%3d \times %3d$  lat' % (nsites, ntimes))))
     # gaps from exact diagonalization
     ax.plot(tsteps[:-1], same_parity_gap * np.ones(len(tsteps[:-1])),
             color = 'r', linewidth = 2, alpha = 0.5,

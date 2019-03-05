@@ -7,7 +7,6 @@ import numpy as np
 from schwinger_helper import cfg_dir, cfg_fname, obs_dir, obs_fname
 from random import randrange
 import os
-import time
 
 ###############################################################################
 #                                CONFIGURATION                                #
@@ -407,8 +406,6 @@ class LocalMC():
         if (self.measure_obs):
             if not(os.path.isdir(obs_dir)):
                 os.mkdir(obs_dir)
-         #    obsfname = obs_fname(obs_dir, nsites, ntimes, jw, mw, tw, n_corr)
-         #    self.obsfile = open(obsfname, 'w')
     def __str__(self):
         m, J, w, Delta_tau = self.upd.params()
         s = ("QMC of %03dx%03d lattice with params (J/w = %.2f, m/w = %.2f, w * Delta_tau = %.2f)."
@@ -450,7 +447,7 @@ class LocalMC():
                                  self.cfg.nsites, self.cfg.ntimes,
                                  float(J/w), float(m/w), float(Delta_tau * w),
                                  int(a_sweep/n_corr))
-                outfile = open(fname, 'w')
+                outfile = open(fname, 'wb')
                 # print("saving %s..." % fname)
                 self.cfg.save(outfile)
                 outfile.close()
@@ -569,7 +566,7 @@ if __name__ == '__main__':
     measure_obs    = False
 ### Specify model parameters
     nsites = 8
-    ntimes = 20
+    ntimes = 80
     # for Savage's paper:   1.60, 0.16, 0.50
     # for Muschik's papers: 1.00, 1.00, 0.05
     # for roughly 20% acc:  0.30, 0.02, 0.50
@@ -585,12 +582,8 @@ if __name__ == '__main__':
     if not(os.path.isdir(obs_dir())):
         os.mkdir(obs_dir())
     obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr)
-    obsfile = open(obsfname, 'w')
     sim = LocalMC(cfg, upd, measure_obs, cfg_dir(), obs_dir())
 ### Evolve ###
-    t1 = time.clock()
     sim.evolve(n_corr, n_equil_sweeps, n_sampl_sweeps, n_print_sweeps)
-    t2 = time.clock()
-    print('Time elapsed: %f seconds' %(t2-t1))
 
 
