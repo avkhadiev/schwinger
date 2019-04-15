@@ -22,12 +22,12 @@ if __name__ == '__main__':
 ### Specify MC settings
     ncor = 10            # how often to save configuration
     neql = 50    * ncor  # length of equilibration
-    ncf  = 100   * ncor  # length of sampling
+    ncf  = 1000   * ncor # length of sampling
 ### Expected condensate density in ground state from exact diagonalization
     expected_condensate = -0.324714
 ### Specify model parameters
     nsites = 8
-    ntimes = 20
+    ntimes = 80
     jw = 1.667
     mw = 0.167
     tw = 0.100

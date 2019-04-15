@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from schwinger import Cfg, LocalUpdates
+from schwinger import Cfg, LocalUpdates, can_hop, hop, are_equal, alpha
 import collections
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -23,7 +23,7 @@ def define_model_params():
 def print_info(cfg, local, n_upd, t_upd):
     sw = "%35s"              # string width
     fp = "%20.8f"            # float precision
-    print "\n"
+    print("\n")
     print((sw + " (%d, %d)")
         % ("Updating the 3x3 patch centered at",
             n_upd, t_upd))
@@ -36,20 +36,20 @@ def print_info(cfg, local, n_upd, t_upd):
 #    print((sw + fp)
 #        % ("Ratio of configuration weights R = ",
 #            local.patch_R(cfg, n_upd, t_upd)))
-    print "\n"
+    print("\n")
 def test_even_odd():
     n_upd = 1
     t_upd = 2
     cfg = Cfg(4, 4)
     local = LocalUpdates(m, J, w, Delta_tau)
     # update for given config
-    print "Current config\n"
+    print("Current config\n")
     print(cfg)
     print_info(cfg, local, n_upd, t_upd)
     local.update(cfg, n_upd, t_upd)
     print_info(cfg, local, n_upd, t_upd)
     local.update(cfg, n_upd, t_upd)     # change back
-    print "Change site parity\n"
+    print("Change site parity\n")
     n_upd += 1
     t_upd -= 1
     print_info(cfg, local, n_upd, t_upd)
@@ -75,7 +75,7 @@ def test_choose_patch():
     cfg = Cfg(nsites, ntimes)
     local = LocalUpdates(m, J, w, Delta_tau)
     white_squares = local.white_squares(nsites, ntimes)
-    print cfg
+    print(cfg)
     gen = []
     for i in range(int(nsweeps * (nsites * ntimes / 2))):
         (site, time) = (local.choose_patch(cfg))
@@ -101,17 +101,61 @@ def test_choose_patch():
         verticalalignment='top', horizontalalignment = 'center', bbox=props)
     plt.subplots_adjust(bottom=0.23)
     plt.show()
+# tests hopping methods (the ones outside the cfg class)
+def test_hopping():
+    print("testing hopping...")
+    n_upd_1 = 0
+    t_upd_1 = 1
+    cfg = Cfg(8, 8)
+    local = LocalUpdates(m, J, w, Delta_tau)
+    local.update(cfg, n_upd_1, t_upd_1)
+    sites0 = cfg.get_sites(0)
+    sites1 = cfg.get_sites(2)
+    links0 = cfg.get_links(0)
+    links1 = cfg.get_links(2)
+    print(cfg)
+    print("T=0")
+    print(sites0)
+    print(links0)
+    print("T=1")
+    print(sites1)
+    print(links1)
+    print("jumping from 0 to 1 at 1...")
+    #print("Can hop from 1 to 0: %d" % (int(can_hop(sites0, 0, 1))))
+    #sites0, links0 =  hop(sites0, links0, 0, 1)
+    #print("after hopping:")
+    #print(sites0)
+    #print(links0)
+    #print(are_equal(sites0, links0, sites1, links1))
+    print(alpha(cfg, 1, 0, 0))
+    print(cfg)
+#
+def test_is_bv():
+    print("testing is_bv()...")
+    n_upd_1 = 0
+    t_upd_1 = 1
+    cfg = Cfg(8, 8)
+    local = LocalUpdates(m, J, w, Delta_tau)
+    print(cfg)
+    print("Testing bare vacuum at t=%d: %d" % (t_upd_1, cfg.is_bv(t_upd_1), ))
+    local.update(cfg, n_upd_1, t_upd_1)
+    print(cfg)
+    print("Testing bare vacuum at t=%d: %d" %(t_upd_1, cfg.is_bv(t_upd_1), ))
+    print("Testing bare vacuum at t=%d: %d" %(t_upd_1 + 1, cfg.is_bv(t_upd_1 + 1), ))
+    print("Testing bare vacuum at t=%d: %d" %(t_upd_1 + 2, cfg.is_bv(t_upd_1 + 2), ))
 def test_is_hop():
 # mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
     def m01(cfg, site, time):
         i = site
         t = time
-        return 0.5 * (cfg.is_hop(i, i-1, t) + cfg.is_hop(i, i+1, t))
+        # return 0.5 * (cfg.is_hop(i, i-1, t) + cfg.is_hop(i, i+1, t))
+        return 0.5 * (alpha(cfg, i, i-1, t) - alpha(cfg, i, i+1, t))
 # mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
     def m01_dagger(cfg, site, time):
         i = site
         t = time
-        return 0.5 * (cfg.is_hop(i-1, i, t) + cfg.is_hop(i+1, i, t))
+        # return 0.5 * (cfg.is_hop(i-1, i, t) + cfg.is_hop(i+1, i, t))
+        return 0.5 * (alpha(cfg, i-1, i, t) - alpha(cfg, i+1, i, t))
 # interpolating operator < mo1^\dagger m01 >
     def interp_m01(cfg, source_site, sink_site, source_time, step):
         i = source_site
@@ -154,7 +198,6 @@ def test_is_hop():
 
 if __name__ == '__main__':
     define_model_params()
-    # test_choose_patch()
-    print test_is_hop()
+    test_hopping()
 
 

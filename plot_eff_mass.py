@@ -25,7 +25,7 @@ if __name__ == '__main__':
     src_site = 1
 ### How many points to plot
     nsteps  = int(ntimes/2)
-    start   = 1                     # omit first # pts
+    start   = 0                     # omit first # pts
     finish  = 1                # omit last # points
     inter = 1                       # plot points with interval
     npoints = int(nsteps) - (start + finish)

@@ -8,6 +8,53 @@ from schwinger_helper import cfg_dir, cfg_fname, obs_dir, obs_fname
 from random import randrange
 import os
 
+def can_hop(sites, from_site, to_site):
+    nsites = len(sites)
+    diff = ((from_site - to_site) % nsites)
+    # compute hopping distance
+    dist = min(diff, nsites - diff)
+    occupied = sites[from_site % nsites]
+    available = sites[to_site  % nsites]
+    can_hop = ((dist == 1) and (occupied == 1) and (available == 0))
+    return can_hop
+
+def hop(sites, links, from_site, to_site):
+    nsites = len(sites)
+    from_site = from_site % nsites
+    to_site = to_site % nsites
+    sites[from_site] = 0
+    sites[to_site  ] = 1
+    # determine direction of hopping to change the link
+    i = from_site
+    j = to_site
+    is_forward = (((i-j) == -1) or ((i == nsites - 1) and (j == 0)))
+    if(is_forward):
+        links[i] -= 1
+    else:
+        links[(i-1) % nsites] += 1
+    return((sites, links))
+
+def are_equal(s1, l1, s2, l2):
+    s_eq = int(np.array_equal(s1, s2))
+    l_eq = int(np.array_equal(l1, l2))
+    equal = s_eq * l_eq
+    return equal
+
+def alpha(cfg, from_site, to_site, time):
+    i = from_site
+    j = to_site
+    t = time
+    s1 = cfg.get_sites(t)
+    l1 = cfg.get_links(t)
+    s2 = cfg.get_sites(t+2)
+    l2 = cfg.get_links(t+2)
+    if(can_hop(s1, i, j)):
+        s, l = hop(s1, l1, i, j)
+        res = are_equal(s, l, s2, l2)
+        return float(res)
+    else:
+        return 0.
+
 ###############################################################################
 #                                CONFIGURATION                                #
 ###############################################################################
@@ -78,6 +125,19 @@ class Cfg():
     # returns the occupation number at site site at time step
     def n(self, site, time):
         return self.sites[time % self.ntimes][site % self.nsites]
+    # returns whether the configuration at time t is a "bare vacuum":
+    # a strong-coupled anti-ferromagnetic state: all links are zero
+    def is_bv(self, time):
+        is_bv = not self.links[time % self.ntimes].any()
+        return is_bv
+    def get_links(self, time):
+        links = np.zeros(self.nsites)
+        links[:] = self.links[time % self.ntimes]
+        return links
+    def get_sites(self, time):
+        sites = np.zeros(self.nsites)
+        sites[:] = self.sites[time % self.ntimes]
+        return sites
     # calculates a dot product between chain at time t1 and t2
     #   = 1 if all occupation numbers and links coincide
     #   = 0 otherwise
@@ -147,7 +207,6 @@ class Cfg():
         empty = (self.n(j, t) == self.n(i, t+1) == 0)
         is_hop = occpd & empty
         return is_hop
-
     # fermion hops from (site, time) to (site + 1, time);
     # connecting link value decreases by 1
     # assumes (site, time) is occupied and (site + 1, time) is unoccupied!
@@ -391,16 +450,18 @@ class LocalUpdates():
 
 class LocalMC():
     """A quantum Monte-Carlo simulation"""
-    def __init__(self, cfg, upd_machine, measur_obs = False, cfg_dir = "cfg", obs_dir = "obs"):
+    def __init__(self, cfg, upd_machine, measur_obs = False, cfg_dir = "cfg", obs_dir = "obs", job_id = 1):
         self.cfg = cfg
         self.upd = upd_machine
         self.measure_obs = measure_obs
         self.cfg_dir = cfg_dir
         self.obs_dir = obs_dir
+        self.job_id = job_id
         m, J, w, deltaTau = self.upd.params()
         self.obsfname = obs_fname(obs_dir, nsites, ntimes,
                     float(J/w), float(m/w), float(deltaTau * w),
-                    n_corr)
+                    n_corr,
+                    job_id)
         if not(os.path.isdir(cfg_dir)):
             os.mkdir(cfg_dir)
         if (self.measure_obs):
@@ -446,7 +507,8 @@ class LocalMC():
                 fname = cfg_fname(self.cfg_dir,
                                  self.cfg.nsites, self.cfg.ntimes,
                                  float(J/w), float(m/w), float(Delta_tau * w),
-                                 int(a_sweep/n_corr))
+                                 int(a_sweep/n_corr),
+                                 self.job_id)
                 outfile = open(fname, 'wb')         # will write bytes through numpy
                 # print("saving %s..." % fname)
                 self.cfg.save(outfile)
@@ -558,15 +620,17 @@ def test_dot(cfg, t_test):
 ###############################################################################
 
 if __name__ == '__main__':
+### Job settings
+    job_id = 10                         # job_id distinguishing different runs
 ### Specify MC settings
-    n_corr = 10                     # how often to save configuration
-    n_equil_sweeps = 50  * n_corr   # length of equilibration
-    n_sampl_sweeps = 100 * n_corr   # length of sampling
-    n_print_sweeps = 10  * n_corr   # how often to print sim status
-    measure_obs    = True
+    n_corr = 10                        # how often to save configuration
+    n_equil_sweeps = 50  * n_corr      # length of equilibration
+    n_sampl_sweeps = 1000000 * n_corr      # length of sampling
+    n_print_sweeps = 10  * n_corr      # how often to print sim status
+    measure_obs    = False
 ### Specify model parameters
     nsites = 8
-    ntimes = 20
+    ntimes = 80
     # for Savage's paper:   1.60, 0.16, 0.50
     # for Muschik's papers: 1.00, 1.00, 0.05
     # for roughly 20% acc:  0.30, 0.02, 0.50
@@ -581,9 +645,9 @@ if __name__ == '__main__':
 #    if (measure_obs):
     if not(os.path.isdir(obs_dir())):
         os.mkdir(obs_dir())
-    obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr)
+    obsfname = obs_fname(obs_dir(), nsites, ntimes, jw, mw, tw, n_corr, job_id)
     # obsfile = open(obsfname, 'w')   # will writes string, not bytes
-    sim = LocalMC(cfg, upd, measure_obs, cfg_dir(), obs_dir())
+    sim = LocalMC(cfg, upd, measure_obs, cfg_dir(), obs_dir(), job_id)
 ### Evolve ###
     sim.evolve(n_corr, n_equil_sweeps, n_sampl_sweeps, n_print_sweeps)
 

@@ -15,6 +15,7 @@ ipython_config.py
 *.png
 *.log
 *.txt
+*.out
 
 # configurations and data
 cfg/

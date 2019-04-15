@@ -34,9 +34,10 @@ def obs_dir():
 
 
 # Returns the name of the observables file (which tracked during sampling)
-def obs_fname(obs_dir, nsites, ntimes, jw, mw, tw, ncorr):
-    fname = ("%s/obs_%03dx%03d_%.3f_%.3f_%.3f_%05d.npy"
+def obs_fname(obs_dir, nsites, ntimes, jw, mw, tw, ncorr, job_id):
+    fname = ("%s/obs_%03d_%03dx%03d_%.3f_%.3f_%.3f_%07d.npy"
                 % (obs_dir,
+                    job_id,
                     nsites, ntimes,
                     jw, mw, tw,
                     ncorr)
@@ -48,10 +49,11 @@ def obs_fname(obs_dir, nsites, ntimes, jw, mw, tw, ncorr):
 
 # gets the file name for a configuration file,
 # according to the naming convention
-def cfg_fname(cfg_dir, nsites, ntimes, jw, mw, tw, ncfg):
+def cfg_fname(cfg_dir, nsites, ntimes, jw, mw, tw, ncfg, job_id):
 # dir/cfg_nsitesxntimes_JW_MW_TW_NSWEEP.npy
-    fname = ("%s/cfg_%03dx%03d_%.3f_%.3f_%.3f_%05d.npy"
+    fname = ("%s/cfg_%03d_%03dx%03d_%.3f_%.3f_%.3f_%07d.npy"
                 % (cfg_dir,
+                    job_id,
                     nsites, ntimes,
                     jw, mw, tw,
                     ncfg)
@@ -61,13 +63,15 @@ def cfg_fname(cfg_dir, nsites, ntimes, jw, mw, tw, ncfg):
     return fname
 
 # gets the file name for a binned result (data) file,
-def res_fname_binned(res_dir, nsites, ntimes, jw, mw, tw, ncfg, nbin, nbins):
-    fname = ("%s/data_%03dx%03d_%.3f_%.3f_%.3f_%05d_%04d-%04d.npy"
+def res_fname_binned(res_dir, nsites, ntimes, jw, mw, tw, ncfg, nbin, nbins, op_string, job_id):
+    fname = ("%s/data_%03d_%03dx%03d_%.3f_%.3f_%.3f_%07d_%06d-%06d_%s.npy"
                 % (res_dir,
+                    job_id,
                     nsites, ntimes,
                     jw, mw, tw,
                     ncfg,
-                    nbin, nbins)
+                    nbin, nbins,
+                    op_string)
                 # "." separating integer from decimal in model paramaters
                 #   is replaced w "p"
             ).replace(".", "p", 3)
@@ -75,12 +79,14 @@ def res_fname_binned(res_dir, nsites, ntimes, jw, mw, tw, ncfg, nbin, nbins):
 
 # gets the file name for a bootrstrapped result (data) file,
 def res_fname_bootstrapped(res_dir, nsites, ntimes, jw, mw, tw,
-        ncfg, nbins, nensembles):
-    fname = ("%s/data_%03dx%03d_%.3f_%.3f_%.3f_%05d_%04d_%04d.npy"
+        ncfg, nbins, nensembles, op_string):
+    fname = ("%s/data_%03dx%03d_%.3f_%.3f_%.3f_%07d_%06d_%06d_%s.npy"
                 % (res_dir,
                     nsites, ntimes,
                     jw, mw, tw,
-                    ncfg, nbins, nensembles)
+                    ncfg,
+                    nbins,
+                    nensembles, op_string)
                 # "." separating integer from decimal in model paramaters
                 #   is replaced w "p"
             ).replace(".", "p", 3)
