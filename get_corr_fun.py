@@ -432,16 +432,14 @@ def vac_expect(cfg, site, time):
 def m01(cfg, site, time):
     i = site
     t = time
-    # return 0.5 * (int(cfg.is_hop(i, i-1, t)) - int(cfg.is_hop(i, i+1, t)))
-    return 0.5 * (cfg.is_hop(cfg, i, i-1, t) - cfg.is_hop(cfg, i, i+1, t))
+    return 0.5 * (int(cfg.is_hop(i, i-1, t)) - int(cfg.is_hop(i, i+1, t)))
 
 # mesonic operator \chi^\dagger_i 1/2 * (\chi_i+1 + \chi_i-1)
 #
 def m01_dagger(cfg, site, time):
     i = site
     t = time
-    # return 0.5 * (int(cfg.is_hop(i-1, i, t)) - int(cfg.is_hop(i+1, i, t)))
-    return 0.5 * (cfg.is_hop(cfg, i-1, i, t) - cfg.is_hop(cfg, i+1, i, t))
+    return 0.5 * (int(cfg.is_hop(i-1, i, t)) - int(cfg.is_hop(i+1, i, t)))
 
 #
 # interpolating operator < mo1^\dagger m01 >
@@ -621,6 +619,7 @@ if __name__ == '__main__':
             # all source times, all separations between source and sink,
             # and all sink sites,
             # and the corresponding vacuum expectation
+<<<<<<< HEAD
             update_smart(cfg, src_site, src_site, src_times, tsteps,
                 tp_corr_acc, vev_acc_ini, vev_acc_fin)
             # close file
