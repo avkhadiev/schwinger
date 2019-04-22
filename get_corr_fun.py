@@ -5,13 +5,12 @@ import numpy as np
 from schwinger_helper import cfg_dir, res_bin_dir, cfg_fname, res_fname_binned
 from schwinger import Cfg
 from schwinger import alpha
-from numba import jit
 import os
 
 # type of interpolating operator used (for filenames)
 op_string = "smart"
 # job settings
-job_id = 1
+job_id = 10
 
 ###############################################################################
 #                             SMART OPERATOR                                  #
@@ -467,16 +466,17 @@ def interp_m01(cfg, source_site, sink_site, source_time, step):
 
 ### CHI_0
 def update_chi0(cfg, src_site, src_times, tsteps,
-        tp_corr_acc, vev_ini_acc, vev_fin_acc):
+        tp_corr_acc, vev_acc_ini, vev_acc_fin):
     # compute connected two-point correlations
     # two-point correlation functions averaged over
     # all source times, all separations between source and sink,
     # and all sink sites,
     # and the corresponding vacuum expectation
     i = src_site
-    create  = np.zeros((len(src_times)))
-    destroy = np.zeros((len(src_times)))
-    for t in range(len(src_times)):
+    nsrctimes = len(src_times)
+    create  = np.zeros(nsrctimes)
+    destroy = np.zeros(nsrctimes)
+    for t in range(nsrctimes):
         # build arrays create and destroy
         create[t] += vac_expect(cfg, i, src_times[t])
         destroy_acc = 0.
@@ -488,23 +488,25 @@ def update_chi0(cfg, src_site, src_times, tsteps,
     # once the arrays create and destroy are built, calculate the two-point
     # function
     ntsteps = len(tsteps)
-    for a in range(ntsteps):
-        tp_corr_inc = create[t] * destroy[(t + a) % ntsteps]
-        tp_corr_acc[t][a] += tp_corr_inc
+    for t in range(nsrctimes):
+        for a in range(ntsteps):
+            tp_corr_inc = create[t] * destroy[(t + a) % nsrctimes]
+            tp_corr_acc[t][a] += tp_corr_inc
     return
 
 ### M_01
 def update_m01(cfg, src_site, src_times, tsteps,
-        tp_corr_acc, vev_ini_acc, vev_fin_acc):
+        tp_corr_acc, vev_acc_ini, vev_acc_fin):
     # compute connected two-point correlations
     # two-point correlation functions averaged over
     # all source times, all separations between source and sink,
     # and all sink sites,
     # and the corresponding vacuum expectation
     i = src_site
-    create  = np.zeros((len(src_times)))
-    destroy = np.zeros((len(src_times)))
-    for t in range(len(src_times)):
+    nsrctimes = len(src_times)
+    create  = np.zeros(nsrctimes)
+    destroy = np.zeros(nsrctimes)
+    for t in range(nsrctimes):
         # build arrays create and destroy
         create[t] += m01(cfg, i, src_times[t])
         destroy_acc = 0.
@@ -513,19 +515,18 @@ def update_m01(cfg, src_site, src_times, tsteps,
         destroy[t] = destroy_acc / float(cfg.nsites / 2.)
         vev_acc_ini[t] += create[t]
         vev_acc_fin[t] += destroy[t]
-    return
     # once the arrays create and destroy are built, calculate the two-point
     # function
     ntsteps = len(tsteps)
-    for a in range(ntsteps):
-        tp_corr_inc = create[t] * destroy[(t + a) % ntsteps]
-        tp_corr_acc[t][a] += tp_corr_inc
+    for t in range(nsrctimes):
+        for a in range(ntsteps):
+            tp_corr_inc = create[t] * destroy[(t + a) % nsrctimes]
+            tp_corr_acc[t][a] += tp_corr_inc
     return
-
 
 ### SMART
 def update_smart(cfg, src_site1, src_site2, src_times, tsteps,
-        tp_corr_acc, vev_ini_acc, vev_fin_acc):
+        tp_corr_acc, vev_acc_ini, vev_acc_fin):
     # compute connected two-point correlations
     # two-point correlation functions averaged over
     # all source times, all separations between source and sink,
@@ -545,8 +546,6 @@ def update_smart(cfg, src_site1, src_site2, src_times, tsteps,
     for t in range(nsrctimes):
         create_a[t] = smart_op_1(cfg, i, src_times[t])
         create_b[t] = smart_op_2(cfg, j, src_times[t])
-        destroy_a[t] = smart_op_1(cfg, i, src_times[t], dagger)
-        destroy_b[t] = smart_op_2(cfg, j, src_times[t], dagger)
         destroy_a_inc = np.zeros(nops1)
         destroy_b_inc = np.zeros(nops2)
         for k in range(i % 2, cfg.nsites, 2):
@@ -560,15 +559,22 @@ def update_smart(cfg, src_site1, src_site2, src_times, tsteps,
     for t in range(nsrctimes):
         if cfg.is_bv(src_times[t]):
             create[t]  = smart_op(create_a[t-1], create_b[t])
-            destroy[t] = smart_op(destroy_a[t-1], destroy_b[t])
+            destroy[t] = smart_op(destroy_b[t-1], destroy_a[t])
         else:
             create[t]  = 0.
             destroy[t] = 0.
+        vev_acc_ini[t] += create[t]
+        vev_acc_fin[t] += destroy[t]
+        #if(create[t] != 0.0):
+        #    print("create %f" % create[t])
+        #if(destroy[t] != 0.0):
+        #    print("destroy %f" % destroy[t])
     # finally, calculate the two-point function
     ntsteps = len(tsteps)
-    for a in range(ntsteps):
-        tp_corr_inc = create[t] * destroy[(t + a) % ntsteps]
-        tp_corr_acc[t][a] += tp_corr_inc
+    for t in range(nsrctimes):
+        for a in range(ntsteps):
+            tp_corr_inc = create[t] * destroy[(t + a) % nsrctimes]
+            tp_corr_acc[t][a] += tp_corr_inc
     return
 
 if __name__ == '__main__':
@@ -619,11 +625,14 @@ if __name__ == '__main__':
             # all source times, all separations between source and sink,
             # and all sink sites,
             # and the corresponding vacuum expectation
-<<<<<<< HEAD
             update_smart(cfg, src_site, src_site, src_times, tsteps,
                 tp_corr_acc, vev_acc_ini, vev_acc_fin)
             # close file
             infile.close()
+        # # DEBUGGING
+        # if (new_bin % nprint == 0):
+        #     print("Current TP CORR ACC:")
+        #     print(np.average(tp_corr_acc, axis=0))
         # calculate the averages per bin
         # two-point correlation functions
         # first, computed separately for each source time

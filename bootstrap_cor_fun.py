@@ -5,10 +5,10 @@ from schwinger_helper import res_dir, res_bin_dir, res_fname_binned, res_fname_b
 import os
 
 # type of interpolating operator used (for filenames)
-op_string = "chi0"
+op_string = "smart"
 
 # job ids to combine (must have same parameters)
-job_ids = [1]
+job_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 ### fraction of bins from each job --- for collectings statistics while the jobs are still running :p
 nbins_per_job_ready = 1000
@@ -148,16 +148,24 @@ def bootstrap(ncfgs_per_job,
     tp_corr_ens_avg = 1./float(nbins) * tp_corr_acc
     vev_ini_ens_avg = 1./float(nbins) * vev_ini_acc
     vev_fin_ens_avg = 1./float(nbins) * vev_fin_acc
-    # finf connected correlations
-    # print("saving files...")
-    # np.savetxt("bootstrap_tp_corr_ens_avg_2.txt", tp_corr_ens_avg)
-    # np.savetxt("bootstrap_vev_ini_ens_avg_2.txt", vev_ini_ens_avg)
-    # np.savetxt("bootstrap_vev_fin_ens_avg_2.txt", vev_fin_ens_avg)
+    print(np.average(tp_corr_ens_avg, axis = 0))
+    print(np.average(vev_ini_ens_avg, axis = 0))
+    print(np.average(vev_fin_ens_avg, axis = 0))
+    # find connected correlations
     cn_tp_corr_ens_avg = tp_corr_ens_avg - vev_ini_ens_avg * vev_fin_ens_avg
+    # cn_tp_corr_ens_avg[cn_tp_corr_ens_avg < 0] = np.nan
+    print(np.average(cn_tp_corr_ens_avg, axis=0))
+    # calculate effective mass
+    eff_mass_ens_avg = np.log(cn_tp_corr_ens_avg[:,:-1]/cn_tp_corr_ens_avg[:,1:])
     # find the average of ensemble averages and their standard deviation
-    cn_tp_corr_avg = np.average(cn_tp_corr_ens_avg, axis = 0)
-    cn_tp_corr_std = np.std(cn_tp_corr_ens_avg, axis=0, ddof=1)
-    return cn_tp_corr_avg, cn_tp_corr_std
+    eff_mass_avg = np.average(eff_mass_ens_avg, axis=0)
+    eff_mass_std = np.std(eff_mass_ens_avg, axis=0, ddof=1)
+    # divide out by the lattice spacing (time step)
+    eff_mass_avg = eff_mass_avg / (2. * tw)
+    eff_mass_std = eff_mass_std / (2. * tw)
+    print(eff_mass_avg)
+    print(eff_mass_std)
+    return eff_mass_avg, eff_mass_std
 
 if __name__ == '__main__':
 ### job ids
@@ -180,18 +188,20 @@ if __name__ == '__main__':
     # (good) source times are only integer numbers.
     tsteps    = np.array(range(0, ntimes, 2))
     # nsteps    = len(tsteps)
-    cn_tp_corr_avg, cn_tp_corr_std = bootstrap(ncfgs_per_job,
+    eff_mass_avg, eff_mass_std = bootstrap(ncfgs_per_job,
             nbins_per_job, nensembles,
             nsites, ntimes, jw, mw, tw, tsteps,
             job_ids)
-    print(cn_tp_corr_avg)
+    # for effective mass M(tau), skip tau = 0
+    tsteps    = tsteps[1:]
+    print(tsteps)
     # print out data file
     # FIXME
     binfrac = (float(nbins_per_job_ready) / float(nbins_per_job))
     ncfgs = int(ncfgs_per_job * njobs * binfrac)
     nbins = int(nbins_per_job * njobs * binfrac)
     results = np.stack((tsteps,
-            cn_tp_corr_avg, cn_tp_corr_std),
+            eff_mass_avg, eff_mass_std),
             axis = -1)
     writeout_dir = res_dir() + "/bootstrapped"
     fname = res_fname_bootstrapped(writeout_dir,

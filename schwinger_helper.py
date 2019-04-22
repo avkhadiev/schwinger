@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-output_dir = "/Users/Arthur/Documents/research/mc_sim/"
+output_dir = "/Volumes/Macintosh HD/Volumes/Mercury/artur/"
 
 # Returns name of the folder where config files reside (from current directory)
 def cfg_dir():
