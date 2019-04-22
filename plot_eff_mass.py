@@ -18,7 +18,7 @@ if __name__ == '__main__':
 ### Gap prediction
     same_parity_gap = 1.84074
     odd_parity_gap  = 1.26463
-    trunc           = 4
+    Lambda           = 4
 ###
     exact_E1  = "mathematica/E1_gap_exact_naive.txt"
     exact_E2  = "mathematica/E2_gap_exact_naive.txt"
@@ -26,11 +26,11 @@ if __name__ == '__main__':
 ### Specify model parameters
     nsites = 8
     ntimes = 80
-    ncf  = 800000
+    ncf  = 10000000
     ncor  = 10
     neql  = 500
-    nbins = 800
-    nens  = 1000
+    nbins = 10000
+    nens  = 10000
     jw = 1.667
     mw = 0.167
     tw = 0.100
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 ### How many points to plot
     nsteps  = int(ntimes/2)
     start   = 0                     # omit first # pts
-    finish  = int(0.75 * nsteps)    # omit last # points
+    finish  = int(0.66 * nsteps)    # omit last # points
     inter = 1                       # plot points with interval
     npoints = int(nsteps) - (start + finish)
     trunc = start + inter * npoints
@@ -90,24 +90,24 @@ if __name__ == '__main__':
     fname       = res_fname_bootstrapped(res_dir() + "/bootstrapped", nsites, ntimes, jw, mw, tw, ncf, nbins, nens, op_string)
     res         = np.transpose(np.loadtxt(fname))
     tsteps         = res[0]
-    cn_tp_corr     = res[1]
-    cn_tp_corr_err = res[2]
-    tsteps         = tsteps[start:trunc:inter]
-    cn_tp_corr     = cn_tp_corr[start:trunc:inter]
-    cn_tp_corr_err = cn_tp_corr_err[start:trunc:inter]
+    eff_mass     = res[1]
+    eff_mass_err = res[2]
+    tsteps       = tsteps[start:trunc:inter]
+    eff_mass     = eff_mass[start:trunc:inter]
+    eff_mass_err = eff_mass_err[start:trunc:inter]
     # remove spurious values (for large timestep artefacts)
     # cn_tp_corr[cn_tp_corr < 0] = np.nan
     # cn_tp_corr_err[cn_tp_corr < 0] = np.nan
     # log[ Gn / Gm ], m = n+1
-    tsteps          = tsteps[1::]
-    eff_mass        = np.log(cn_tp_corr[:-1]/cn_tp_corr[1:])
+    # tsteps          = tsteps[1::]
+    # eff_mass        = np.log(cn_tp_corr[:-1]/cn_tp_corr[1:])
     # Sqrt[ dx^2 / x^2 + dy^2 / y^2 ]
-    eff_mass_err = np.sqrt(
-                (cn_tp_corr_err[:-1]/cn_tp_corr[:-1])**2
-                + (cn_tp_corr_err[1:]/cn_tp_corr[1:])**2)
-    # size of the step is tw * 2 = t/a
-    eff_mass = eff_mass / (2. * tw)
-    eff_mass_err = eff_mass_err / (2. * tw)
+    # eff_mass_err = np.sqrt(
+    #             (cn_tp_corr_err[:-1]/cn_tp_corr[:-1])**2
+    #             + (cn_tp_corr_err[1:]/cn_tp_corr[1:])**2)
+    # # size of the step is tw * 2 = t/a
+    # eff_mass = eff_mass / (2. * tw)
+    # eff_mass_err = eff_mass_err / (2. * tw)
     # download exact data
     if (op_string == 'chi0'):
         exact = np.transpose(np.loadtxt(exact_E2))
@@ -139,11 +139,11 @@ if __name__ == '__main__':
     if (op_string == 'chi0'):
         ax.plot(tsteps, same_parity_gap * np.ones(len(tsteps)),
                 color = 'r', linewidth = 2, alpha = 0.5,
-                label = r'$m_{\mathrm{S}^{+}}=%.3f, \tilde{\Lambda}=%d$' % (same_parity_gap, trunc, ))
+                label = r'$m_{\mathrm{S}^{+}}=%.3f, \tilde{\Lambda}=%d$' % (same_parity_gap, Lambda, ))
     elif ((op_string == 'm01') or (op_string == 'smart')):
         ax.plot(tsteps, odd_parity_gap * np.ones(len(tsteps)),
                 color = 'b', linewidth = 2, alpha = 0.5,
-                label = r'm_{\mathrm{V}^{-}}$%.3f, \tilde{\Lambda}=%d$'  % (odd_parity_gap, trunc, ))
+                label = r'$m_{\mathrm{V}^{-}}=%.3f, \tilde{\Lambda}=%d$'  % (odd_parity_gap, Lambda, ))
     ax.legend(frameon = False, loc = 'lower left', fontsize = 10)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True)) # sets integer ticks
     # plt.ylim((-1.0, 2.1))
