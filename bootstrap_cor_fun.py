@@ -5,10 +5,10 @@ from schwinger_helper import res_dir, res_bin_dir, res_fname_binned, res_fname_b
 import os
 
 # type of interpolating operator used (for filenames)
-op_string = "smart"
+op_string = "m01"
 
 # job ids to combine (must have same parameters)
-job_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+job_ids = [11]
 
 ### fraction of bins from each job --- for collectings statistics while the jobs are still running :p
 nbins_per_job_ready = 1000
@@ -148,21 +148,24 @@ def bootstrap(ncfgs_per_job,
     tp_corr_ens_avg = 1./float(nbins) * tp_corr_acc
     vev_ini_ens_avg = 1./float(nbins) * vev_ini_acc
     vev_fin_ens_avg = 1./float(nbins) * vev_fin_acc
-    print(np.average(tp_corr_ens_avg, axis = 0))
-    print(np.average(vev_ini_ens_avg, axis = 0))
-    print(np.average(vev_fin_ens_avg, axis = 0))
+    #print(np.average(tp_corr_ens_avg, axis = 0))
+    #print(np.average(vev_ini_ens_avg * vev_fin_ens_avg, axis = 0))
     # find connected correlations
     cn_tp_corr_ens_avg = tp_corr_ens_avg - vev_ini_ens_avg * vev_fin_ens_avg
     # cn_tp_corr_ens_avg[cn_tp_corr_ens_avg < 0] = np.nan
-    print(np.average(cn_tp_corr_ens_avg, axis=0))
+    #print(np.average(cn_tp_corr_ens_avg, axis=0))
     # calculate effective mass
-    eff_mass_ens_avg = np.log(cn_tp_corr_ens_avg[:,:-1]/cn_tp_corr_ens_avg[:,1:])
+    ratio = np.zeros(int(ntimes/2) - eff_mass_step)
+    for pt in range(len(cn_tp_corr_ens_avg) - eff_mass_step):
+        ratio[pt] = cn_tp_corr_ens_avg[pt]/cn_tp_corr_ens_avg[pt+eff_mass_step]
+    ratio[ratio < 0] = np.nan
+    eff_mass_ens_avg = np.log(ratio)
     # find the average of ensemble averages and their standard deviation
-    eff_mass_avg = np.average(eff_mass_ens_avg, axis=0)
-    eff_mass_std = np.std(eff_mass_ens_avg, axis=0, ddof=1)
+    eff_mass_avg = np.nanmean(eff_mass_ens_avg, axis=0)
+    eff_mass_std = np.nanstd(eff_mass_ens_avg, axis=0, ddof=1)
     # divide out by the lattice spacing (time step)
-    eff_mass_avg = eff_mass_avg / (2. * tw)
-    eff_mass_std = eff_mass_std / (2. * tw)
+    eff_mass_avg = eff_mass_avg / (eff_mass_step * 2. * tw)
+    eff_mass_std = eff_mass_std / (eff_mass_step * 2. * tw)
     print(eff_mass_avg)
     print(eff_mass_std)
     return eff_mass_avg, eff_mass_std
@@ -183,6 +186,7 @@ if __name__ == '__main__':
     jw = 1.667
     mw = 0.167
     tw = 0.100
+    eff_mass_step = 1
     # due to the checkerboard splitting, it only makes sense to average
     # over an even number of time steps; consequently,
     # (good) source times are only integer numbers.

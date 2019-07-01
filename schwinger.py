@@ -171,38 +171,38 @@ class Cfg():
         t = at_time
         site_dist = (abs((i % self.nsites) - (j % self.nsites)))
         assert((site_dist == 1) or (site_dist == self.nsites - 1))
-        #
-        # due to checkerboard splitting, shift time if required
-        #
-        # first determine if specified coordinates give hopping on a shaded
-        # square or a white square
-        #
-        # to check if a square is white, first
-        # choose bottom-left corner of the square
-        if (((i % self.nsites == 0)) or ((j % self.nsites) == 0)):
-            max_index = max(i % self.nsites, j % self.nsites)
-            if(max_index == 1):
-                bleft = 0
-            elif(max_index == (self.nsites - 1)):
-                bleft = self.nsites-1
-            else:
-                print("checking if square is white in is_hop(): unexpected case")
-        else:
-            bleft = min(i, j)
-        # assuming the square with bleft 0, 0 is black,
-        # a square is white if bleft + t = odd number
-        is_white = ((bleft + t) % 2 == 1)
-        if (is_white):
-            # if the square is white and the time coordinate is odd,
-            # shift the time back
-            if (t % 2 == 1):
-                t = t - 1
-            # if the square is white and the time coordinate is even,
-            # shift the time forward
-            elif (t % 2 == 0):
-                t = t + 1
-        # to have a hop from i to j at time t, must have
-        # n(i, t) == n(j, t+1) == 1 and n(j, t) == n(i, t+1) == 0
+        ##
+        ## due to checkerboard splitting, shift time if required
+        ##
+        ## first determine if specified coordinates give hopping on a shaded
+        ## square or a white square
+        ##
+        ## to check if a square is white, first
+        ## choose bottom-left corner of the square
+        #if (((i % self.nsites == 0)) or ((j % self.nsites) == 0)):
+        #    max_index = max(i % self.nsites, j % self.nsites)
+        #    if(max_index == 1):
+        #        bleft = 0
+        #    elif(max_index == (self.nsites - 1)):
+        #        bleft = self.nsites-1
+        #    else:
+        #        print("checking if square is white in is_hop(): unexpected case")
+        #else:
+        #    bleft = min(i, j)
+        ## assuming the square with bleft 0, 0 is black,
+        ## a square is white if bleft + t = odd number
+        #is_white = ((bleft + t) % 2 == 1)
+        #if (is_white):
+        #    # if the square is white and the time coordinate is odd,
+        #    # shift the time back
+        #    if (t % 2 == 1):
+        #        t = t - 1
+        #    # if the square is white and the time coordinate is even,
+        #    # shift the time forward
+        #    elif (t % 2 == 0):
+        #        t = t + 1
+        ## to have a hop from i to j at time t, must have
+        ## n(i, t) == n(j, t+1) == 1 and n(j, t) == n(i, t+1) == 0
         occpd = (self.n(i ,t) == self.n(j, t+1) == 1)
         empty = (self.n(j, t) == self.n(i, t+1) == 0)
         is_hop = occpd & empty
@@ -304,7 +304,8 @@ class LocalUpdates():
     def p_acc(self, cfg, site, time):
         assert(self.is_square_white(site, time))
         R = self.patch_R(cfg, site, time)
-        p = R / (1 + R)
+        # p = R / (1 + R) # (Heatbath)
+        p = min(1., R)    #            (Metropolis-Hastings)
         return p
 
     def update(self, cfg, site, time):
@@ -621,22 +622,22 @@ def test_dot(cfg, t_test):
 
 if __name__ == '__main__':
 ### Job settings
-    job_id = 10                         # job_id distinguishing different runs
+    job_id = 30                       # job_id distinguishing different runs
 ### Specify MC settings
     n_corr = 10                        # how often to save configuration
-    n_equil_sweeps = 50  * n_corr      # length of equilibration
-    n_sampl_sweeps = 1000000 * n_corr      # length of sampling
+    n_equil_sweeps = 5000  * n_corr    # length of equilibration
+    n_sampl_sweeps = 1000000 * n_corr  # length of sampling
     n_print_sweeps = 10  * n_corr      # how often to print sim status
     measure_obs    = False
 ### Specify model parameters
     nsites = 8
-    ntimes = 80
+    ntimes = 160
     # for Savage's paper:   1.60, 0.16, 0.50
     # for Muschik's papers: 1.00, 1.00, 0.05
-    # for roughly 20% acc:  0.30, 0.02, 0.50
+    # for roughly 20% acc:  0.30, 0.02, 0.5
     jw = 1.667
     mw = 0.167
-    tw = 0.100
+    tw = 0.050
     define_model_params(jw, mw, tw)
     local = LocalUpdates(m, J, w, Delta_tau)
 ### Initialize the simulation ###

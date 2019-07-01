@@ -7,7 +7,7 @@ import matplotlib.ticker as mticker
 from matplotlib.ticker import MaxNLocator
 from schwinger_helper import res_dir, res_fname_bootstrapped, eff_mass_fig_name
 
-op_string = 'smart'
+op_string = 's1'
 
 # for nice scientific notation
 f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
@@ -18,7 +18,7 @@ if __name__ == '__main__':
 ### Gap prediction
     same_parity_gap = 1.84074
     odd_parity_gap  = 1.26463
-    Lambda           = 4
+    Lambda          = 4
 ###
     exact_E1  = "mathematica/E1_gap_exact_naive.txt"
     exact_E2  = "mathematica/E2_gap_exact_naive.txt"
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         ax.plot(tsteps, odd_parity_gap * np.ones(len(tsteps)),
                 color = 'b', linewidth = 2, alpha = 0.5,
                 label = r'$m_{\mathrm{V}^{-}}=%.3f, \tilde{\Lambda}=%d$'  % (odd_parity_gap, Lambda, ))
-    ax.legend(frameon = False, loc = 'lower left', fontsize = 10)
+    ax.legend(frameon = False, loc = 'lower left', fontsize = 12)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True)) # sets integer ticks
     # plt.ylim((-1.0, 2.1))
     plt.subplots_adjust(right=0.77, bottom=0.18)
